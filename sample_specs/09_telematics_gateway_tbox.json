@@ -1,0 +1,153 @@
+{
+  "ecu_name": "Telematics_Gateway_TBox",
+  "can_request_id": "0x710",
+  "can_response_id": "0x718",
+  "can_functional_id": "0x7DF",
+  "p2_server_max_ms": 50,
+  "p2_star_server_max_ms": 5000,
+  "s3_server_timeout_ms": 5000,
+  "security_seed_key_mask": 120,
+  "services": [
+    {
+      "service_id": 16,
+      "name": "DiagnosticSessionControl",
+      "supported_subfunctions": [
+        1,
+        2,
+        3
+      ],
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED",
+        "PROGRAMMING"
+      ]
+    },
+    {
+      "service_id": 34,
+      "name": "ReadDataByIdentifier",
+      "supported_subfunctions": [],
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "service_id": 39,
+      "name": "SecurityAccess",
+      "supported_subfunctions": [
+        1,
+        2
+      ],
+      "allowed_sessions": [
+        "EXTENDED",
+        "PROGRAMMING"
+      ]
+    },
+    {
+      "service_id": 46,
+      "name": "WriteDataByIdentifier",
+      "supported_subfunctions": [],
+      "allowed_sessions": [
+        "EXTENDED"
+      ],
+      "requires_security": true,
+      "security_level": 1
+    },
+    {
+      "service_id": 49,
+      "name": "RoutineControl",
+      "supported_subfunctions": [
+        1,
+        3
+      ],
+      "allowed_sessions": [
+        "EXTENDED",
+        "PROGRAMMING"
+      ],
+      "requires_security": true,
+      "security_level": 1
+    },
+    {
+      "service_id": 62,
+      "name": "TesterPresent",
+      "supported_subfunctions": [
+        0,
+        128
+      ],
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED",
+        "PROGRAMMING"
+      ]
+    }
+  ],
+  "dids": [
+    {
+      "did_hex": "0xF190",
+      "name": "VIN",
+      "length_bytes": 17,
+      "data_type": "ASCII",
+      "access": "READ_ONLY",
+      "default_value": "KMHE341CBLA012345",
+      "security_level": 0,
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "did_hex": "0x0A00",
+      "name": "CellularSignalStrength",
+      "length_bytes": 1,
+      "data_type": "UINT8",
+      "access": "READ_ONLY",
+      "default_value": "1C",
+      "security_level": 0,
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "did_hex": "0x0A01",
+      "name": "GPSLocation",
+      "length_bytes": 8,
+      "data_type": "HEX",
+      "access": "READ_ONLY",
+      "default_value": "02540B2005080E40",
+      "security_level": 0,
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "did_hex": "0x0A10",
+      "name": "OTAServerBackendURLConfig",
+      "length_bytes": 16,
+      "data_type": "ASCII",
+      "access": "READ_WRITE",
+      "default_value": "ota.oemcloud.com",
+      "security_level": 1,
+      "allowed_sessions": [
+        "EXTENDED"
+      ]
+    }
+  ],
+  "routines": [
+    {
+      "routine_id": "0x0A20",
+      "name": "TriggerOTAImageVerification",
+      "supported_subfunctions": [
+        1,
+        3
+      ],
+      "start_payload_length": 4,
+      "allowed_sessions": [
+        "PROGRAMMING"
+      ],
+      "requires_security": true,
+      "security_level": 1
+    }
+  ]
+}

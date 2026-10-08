@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoDiag-AI | Automotive UDS Diagnostic Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: #020617; --primary: #0F172A; --secondary: #1E293B;
+      --card: #0E1223; --muted: #1A1E2F; --border: #334155;
+      --fg: #F8FAFC; --muted-fg: #94A3B8;
+      --accent: #22C55E; --blue: #3B82F6; --amber: #F59E0B; --red: #EF4444;
+      --mono: 'Fira Code', 'Cascadia Code', monospace;
+      --sans: 'Fira Sans', system-ui, sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5;overflow-x:hidden;}
+    body{display:flex;min-height:100vh;width:100%;background:var(--bg);overflow-x:hidden;}
+    ::-webkit-scrollbar{width:8px;height:8px;}
+    ::-webkit-scrollbar-track{background:var(--primary);}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    ::-webkit-scrollbar-thumb:hover{background:var(--muted-fg);}
+
+    /* Sidebar (Sticky on left) */
+    .sidebar{
+      width:230px;min-width:230px;height:100vh;position:sticky;top:0;
+      background:var(--primary);border-right:1px solid var(--border);
+      display:flex;flex-direction:column;flex-shrink:0;z-index:40;
+    }
+    .logo{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+    .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#3B82F6,#1D4ED8);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 12px rgba(59,130,246,.4);}
+    .logo-name{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.4px;}
+    .logo-sub{font-size:10px;color:var(--muted-fg);font-family:var(--mono);}
+    .nav{flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;}
+    .sec-label{font-size:10px;font-weight:600;color:var(--muted-fg);letter-spacing:1px;text-transform:uppercase;padding:8px 8px 3px;}
+    .nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer;transition:all 150ms;color:var(--muted-fg);font-size:12px;font-weight:500;border:1px solid transparent;background:none;text-align:left;width:100%;}
+    .nav-item:hover{background:var(--muted);color:var(--fg);}
+    .nav-item.active{background:rgba(59,130,246,.12);color:#60A5FA;border-color:rgba(59,130,246,.25);}
+    .nav-item:focus-visible{outline:2px solid var(--blue);outline-offset:1px;}
+    .nav-badge{margin-left:auto;font-size:10px;font-family:var(--mono);font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(34,197,94,.15);color:#22C55E;border:1px solid rgba(34,197,94,.25);}
+    .sidebar-footer{padding:10px 8px;border-top:1px solid var(--border);flex-shrink:0;}
+    .ecu-pill{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:7px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);}
+    .pulse{width:7px;height:7px;border-radius:50%;background:#22C55E;flex-shrink:0;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4);}50%{box-shadow:0 0 0 5px rgba(34,197,94,0);}}
+    .ecu-name{font-family:var(--mono);font-size:11px;color:#22C55E;font-weight:600;}
+    .ecu-sub{font-size:10px;color:var(--muted-fg);}
+
+    /* Main (Full height & natural scrolling) */
+    .main{
+      flex:1;min-width:0;min-height:100vh;display:flex;flex-direction:column;
+      background:var(--bg);
+    }
+    .topbar{
+      height:50px;background:var(--primary);border-bottom:1px solid var(--border);
+      display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0;
+      position:sticky;top:0;z-index:35;
+    }
+    .topbar-title{font-family:var(--mono);font-size:13px;font-weight:600;}
+    .topbar-badge{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(59,130,246,.12);color:#60A5FA;border:1px solid rgba(59,130,246,.25);}
+    .topbar-right{margin-left:auto;display:flex;align-items:center;gap:7px;}
+    .tbtn{padding:5px 11px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all 150ms;font-family:var(--sans);display:flex;align-items:center;gap:5px;background:var(--secondary);color:var(--fg);}
+    .tbtn:hover{background:var(--muted);}
+    .tbtn.green{background:var(--accent);color:#0F172A;border-color:var(--accent);}
+    .tbtn.green:hover{background:#16A34A;}
+    .tbtn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+
+    /* Tabs Bar (Sticky below topbar) */
+    .tabs{
+      display:flex;gap:1px;border-bottom:1px solid var(--border);padding:0 20px;
+      background:var(--primary);flex-shrink:0;position:sticky;top:50px;z-index:30;
+      overflow-x:auto;
+    }
+    .tab{padding:10px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted-fg);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 150ms;display:flex;align-items:center;gap:5px;background:none;border-left:none;border-right:none;border-top:none;white-space:nowrap;}
+    .tab:hover{color:var(--fg);}
+    .tab.active{color:#60A5FA;border-bottom-color:#3B82F6;}
+    .tab:focus-visible{outline:2px solid var(--blue);}
+
+    /* Content Pane */
+    .pane{
+      display:none;flex-direction:column;gap:16px;padding:20px 24px 120px 24px;
+      width:100%;max-width:1440px;margin:0 auto;
+    }
+    .pane.active{display:flex;}
+
+    /* Cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+    .card-hdr{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;justify-content:space-between;}
+    .card-title{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;}
+    .card-body{padding:12px 14px;}
+
+    /* Stat grid */
+    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:9px 12px;}
+    .stat-lbl{font-size:10px;color:var(--muted-fg);text-transform:uppercase;letter-spacing:.8px;font-weight:600;}
+    .stat-val{font-family:var(--mono);font-size:19px;font-weight:700;margin-top:2px;}
+    .stat-sub{font-size:10px;color:var(--muted-fg);font-family:var(--mono);}
+    .stat.green{border-color:rgba(34,197,94,.25);}
+    .stat.green .stat-val{color:#22C55E;}
+    .stat.blue{border-color:rgba(59,130,246,.25);}
+    .stat.blue .stat-val{color:#60A5FA;}
+    .stat.amber{border-color:rgba(245,158,11,.25);}
+    .stat.amber .stat-val{color:#FCD34D;}
+    .stat.red{border-color:rgba(239,68,68,.25);}
+    .stat.red .stat-val{color:#F87171;}
+
+    /* Upload */
+    .drop{border:2px dashed var(--border);border-radius:9px;padding:24px;text-align:center;cursor:pointer;transition:all 200ms;background:var(--muted);display:flex;flex-direction:column;align-items:center;gap:7px;}
+    .drop:hover,.drop.over{border-color:var(--blue);background:rgba(59,130,246,.04);}
+    .drop:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+    #fileIn{display:none;}
+    .fmts{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:3px;}
+    .fmt{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px;background:var(--secondary);border:1px solid var(--border);color:var(--muted-fg);}
+    .loaded-pill{display:flex;align-items:center;gap:8px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:7px 12px;font-family:var(--mono);font-size:12px;color:#22C55E;}
+
+    /* Form */
+    .inp{width:100%;background:var(--muted);border:1px solid var(--border);border-radius:6px;padding:7px 11px;font-size:13px;color:var(--fg);font-family:var(--sans);outline:none;transition:border-color 150ms;}
+    .inp:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(59,130,246,.15);}
+    .inp::placeholder{color:var(--muted-fg);}
+    textarea.inp{resize:vertical;min-height:50px;line-height:1.5;}
+    .sel{background:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--fg);font-family:var(--mono);outline:none;cursor:pointer;}
+    .sel:focus{border-color:var(--blue);}
+
+    /* Buttons */
+    .btn{padding:6px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;transition:all 150ms;font-family:var(--sans);display:inline-flex;align-items:center;gap:5px;}
+    .btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+    .btn:disabled{opacity:.4;cursor:not-allowed;}
+    .btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+    .btn-blue:hover{background:#2563EB;}
+    .btn-green{background:var(--accent);color:#0F172A;border-color:var(--accent);}
+    .btn-green:hover{background:#16A34A;}
+    .btn-ghost{background:var(--secondary);color:var(--fg);border-color:var(--border);}
+    .btn-ghost:hover{background:var(--muted);}
+    .btn-amber{background:rgba(245,158,11,.1);color:#FCD34D;border-color:rgba(245,158,11,.3);}
+    .btn-amber:hover{background:rgba(245,158,11,.2);}
+    .btn-outline{background:transparent;color:#60A5FA;border-color:rgba(59,130,246,.4);}
+    .btn-outline:hover{background:rgba(59,130,246,.1);}
+
+    /* Table */
+    .tbl{width:100%;border-collapse:collapse;font-size:12px;}
+    .tbl th{padding:7px 9px;text-align:left;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted-fg);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);background:var(--primary);position:sticky;top:0;z-index:1;}
+    .tbl td{padding:6px 9px;border-bottom:1px solid rgba(51,65,85,.4);vertical-align:middle;}
+    .tbl tr:hover td{background:rgba(30,41,59,.5);}
+    .tbl tr:last-child td{border-bottom:none;}
+
+    /* Badges */
+    .b{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;}
+    .bp{background:rgba(34,197,94,.12);color:#22C55E;border:1px solid rgba(34,197,94,.25);}
+    .bn{background:rgba(239,68,68,.12);color:#F87171;border:1px solid rgba(239,68,68,.25);}
+    .bs{background:rgba(245,158,11,.12);color:#FCD34D;border:1px solid rgba(245,158,11,.25);}
+    .bi{background:rgba(59,130,246,.12);color:#60A5FA;border:1px solid rgba(59,130,246,.25);}
+    .bv{background:rgba(139,92,246,.12);color:#C4B5FD;border:1px solid rgba(139,92,246,.25);}
+
+    /* AI Bubble */
+    .ai-card{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:7px;padding:11px 13px;font-size:13px;line-height:1.7;}
+    .cite{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;padding:2px 7px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:4px;color:#60A5FA;margin:3px 3px 0 0;}
+
+    /* Progress */
+    .prog-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+    .prog-fill{height:100%;border-radius:2px;transition:width 300ms ease;}
+    .prog-fill.green{background:var(--accent);}
+
+    /* CAN log */
+    .can-log{max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;background:#01040F;}
+    .code{background:#01040F;border:1px solid var(--border);border-radius:7px;padding:11px 13px;font-family:var(--mono);font-size:11px;color:#a8b9cc;overflow:auto;max-height:260px;white-space:pre;line-height:1.6;}
+    .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.15);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;display:inline-block;}
+    @keyframes s{to{transform:rotate(360deg);}}
+
+    /* Benchmark Graph Cards */
+    .graph-card{background:#070B19;border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color 150ms;}
+    .graph-card:hover{border-color:var(--blue);}
+    .graph-img{width:100%;height:auto;display:block;border-bottom:1px solid var(--border);}
+    .graph-caption{padding:8px 12px;font-size:11px;color:var(--muted-fg);font-family:var(--mono);}
+
+    /* Toast */
+    #toasts{position:fixed;bottom:18px;right:18px;z-index:1000;display:flex;flex-direction:column;gap:7px;pointer-events:none;}
+    .toast{padding:9px 14px;border-radius:7px;font-size:12px;font-weight:500;min-width:220px;max-width:360px;pointer-events:auto;display:flex;align-items:center;gap:9px;border:1px solid;animation:tIn .2s ease,tOut .3s ease 2.7s forwards;}
+    .toast.success{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:#22C55E;}
+    .toast.error{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35);color:#F87171;}
+    .toast.info{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.35);color:#60A5FA;}
+    @keyframes tIn{from{transform:translateY(16px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+    @keyframes tOut{to{opacity:0;transform:translateY(-5px);}}
+
+    @media(max-width:900px){.sidebar{display:none;}.stats{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}.pane{padding:10px 11px;}}
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" aria-label="Main navigation">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
+    </div>
+    <div><div class="logo-name">AutoDiag-AI</div><div class="logo-sub">ISO 14229 Platform</div></div>
+  </div>
+  <div class="nav">
+    <div class="sec-label">Workspace</div>
+    <button class="nav-item active" onclick="go('upload')" id="n-upload">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Spec Ingestion
+    </button>
+    <button class="nav-item" onclick="go('ai')" id="n-ai">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      AI Assistant
+    </button>
+    <button class="nav-item" onclick="go('matrix')" id="n-matrix">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Test Matrix
+      <span class="nav-badge" id="nbadge">—</span>
+    </button>
+    <button class="nav-item" onclick="go('sim')" id="n-sim">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Virtual ECU Bench
+    </button>
+    <button class="nav-item" onclick="go('benchmark')" id="n-benchmark">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      10-ECU Benchmark
+      <span class="nav-badge" style="background:rgba(59,130,246,0.15);color:#60A5FA;border-color:rgba(59,130,246,0.3);">10 ECUs</span>
+    </button>
+    <button class="nav-item" onclick="go('export')" id="n-export">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Script Exporter
+    </button>
+
+    <div class="sec-label" style="margin-top:8px;">Standards</div>
+    <div class="nav-item" style="cursor:default;font-size:11px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>ISO 14229-1:2020</div>
+    <div class="nav-item" style="cursor:default;font-size:11px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>ISO 15765-2:2016</div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="ecu-pill">
+      <div class="pulse"></div>
+      <div><div class="ecu-name" id="ecuName">Virtual ECU: Ready</div><div class="ecu-sub" id="ecuSub">No spec loaded</div></div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+  <header class="topbar">
+    <span class="topbar-title" id="ttitle">Specification Ingestion</span>
+    <span class="topbar-badge" id="tbadge">Awaiting Upload</span>
+    <div class="topbar-right">
+      <button class="tbtn" onclick="loadSample()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.45-8"/></svg>
+        Load Sample
+      </button>
+      <a href="/docs" target="_blank" rel="noopener" class="tbtn" style="text-decoration:none;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        API Docs
+      </a>
+      <button class="tbtn green" onclick="go('sim');runSim();">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Run Tests
+      </button>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" id="t-upload" onclick="go('upload')" role="tab" aria-selected="true">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Spec Ingestion
+    </button>
+    <button class="tab" id="t-ai" onclick="go('ai')" role="tab" aria-selected="false">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      AI Assistant
+    </button>
+    <button class="tab" id="t-matrix" onclick="go('matrix')" role="tab" aria-selected="false">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Test Matrix
+    </button>
+    <button class="tab" id="t-sim" onclick="go('sim')" role="tab" aria-selected="false">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Virtual ECU Bench
+    </button>
+    <button class="tab" id="t-benchmark" onclick="go('benchmark')" role="tab" aria-selected="false">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      10-ECU Benchmark
+    </button>
+    <button class="tab" id="t-export" onclick="go('export')" role="tab" aria-selected="false">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Script Exporter
+    </button>
+  </div>
+
+  <!-- TAB: UPLOAD -->
+  <div class="pane active" id="p-upload">
+    <div class="stats">
+      <div class="stat"><div class="stat-lbl">ECU Target</div><div class="stat-val" id="sEcu" style="font-size:12px;padding-top:3px;">—</div></div>
+      <div class="stat blue"><div class="stat-lbl">Services</div><div class="stat-val" id="sSvc">—</div><div class="stat-sub" id="sSvcList">—</div></div>
+      <div class="stat blue"><div class="stat-lbl">DIDs</div><div class="stat-val" id="sDid">—</div><div class="stat-sub">Identifiers</div></div>
+      <div class="stat amber"><div class="stat-lbl">Routines</div><div class="stat-val" id="sRtn">—</div></div>
+      <div class="stat green"><div class="stat-lbl">CAN IDs</div><div class="stat-val" id="sCan" style="font-size:11px;padding-top:4px;">—</div><div class="stat-sub">Req / Resp</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload Diagnostic Specification
+        </div>
+        <span id="loadedBadge" style="display:none;" class="b bp">✓ Loaded</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="drop" id="dropzone" tabindex="0" role="button" aria-label="Upload diagnostic specification file"
+             onclick="document.getElementById('fileIn').click()"
+             onkeydown="if(event.key==='Enter'||event.key===' ')document.getElementById('fileIn').click()">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--muted-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div style="font-size:13px;font-weight:600;">Drag &amp; drop diagnostic spec here</div>
+          <div style="font-size:11px;color:var(--muted-fg);">or click to browse files</div>
+          <div class="fmts"><span class="fmt">.json</span><span class="fmt">.pdf</span><span class="fmt">.odx</span><span class="fmt">.xml</span><span class="fmt">.txt</span></div>
+        </div>
+        <input type="file" id="fileIn" accept=".json,.pdf,.odx,.xml,.txt" />
+        <div id="uploadMsg" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="card" id="didCard" style="display:none;">
+      <div class="card-hdr"><div class="card-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Data Identifiers (DIDs)</div></div>
+      <div style="overflow-x:auto;max-height:260px;overflow-y:auto;"><table class="tbl"><thead><tr><th>DID</th><th>Name</th><th>Length</th><th>Type</th><th>Access</th><th>Sec</th><th>Sessions</th><th>Default</th></tr></thead><tbody id="didBody"></tbody></table></div>
+    </div>
+
+    <div class="card" id="svcCard" style="display:none;">
+      <div class="card-hdr"><div class="card-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>ISO 14229 Services</div></div>
+      <div style="overflow-x:auto;max-height:220px;overflow-y:auto;"><table class="tbl"><thead><tr><th>SID</th><th>Service Name</th><th>Subfunctions</th><th>Sessions</th><th>Security</th></tr></thead><tbody id="svcBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- TAB: AI ASSISTANT -->
+  <div class="pane" id="p-ai">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Natural Language Diagnostic Q&amp;A</div>
+        <span style="font-size:11px;color:var(--muted-fg);">Grounded in ISO 14229 + ECU spec with exact citations</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:9px;">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--muted-fg);align-self:center;">Try:</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 9px;" onclick="setQ('What are the session and security prerequisites to write DID 0x0200?')">Write DID prerequisites</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 9px;" onclick="setQ('Explain the Seed Key flow in Service $27')">Security $27 flow</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 9px;" onclick="setQ('What services are allowed in Programming session?')">Programming session</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 9px;" onclick="setQ('When does ECU return NRC 0x7F vs 0x22?')">NRC precedence</button>
+        </div>
+        <div style="display:flex;gap:7px;align-items:flex-start;">
+          <textarea id="qInput" class="inp" placeholder="Ask about ISO 14229 services, DIDs, sessions, security, NRCs..." rows="2" style="flex:1;" aria-label="Diagnostic query"></textarea>
+          <button class="btn btn-blue" onclick="askAI()" id="qBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Ask
+          </button>
+        </div>
+        <div id="aiOut" style="display:none;"></div>
+        <div id="aiCite" style="display:none;"></div>
+      </div>
+    </div>
+    <div id="aiHist" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+
+  <!-- TAB: TEST MATRIX -->
+  <div class="pane" id="p-matrix">
+    <div style="display:flex;align-items:center;gap:9px;justify-content:space-between;">
+      <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Automated Test Case Matrix
+      </div>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <select class="sel" id="mxFilter" onchange="filterMx()" aria-label="Filter test type">
+          <option value="">All Types</option>
+          <option value="POSITIVE">Positive</option>
+          <option value="NEGATIVE_NRC">Negative NRC</option>
+          <option value="SECURITY_ACCESS">Security Access</option>
+        </select>
+        <button class="btn btn-blue" onclick="genMatrix()" id="genBtn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.45-8"/></svg>
+          Synthesize Matrix
+        </button>
+      </div>
+    </div>
+    <div id="mxSummary" style="display:none;flex-wrap:wrap;gap:6px;" role="status" aria-live="polite"></div>
+    <div class="card" style="overflow:hidden;">
+      <div style="overflow-x:auto;max-height:500px;overflow-y:auto;">
+        <table class="tbl" id="mxTable" aria-label="Test case matrix">
+          <thead><tr><th>ID</th><th>Type</th><th>Test Name</th><th>Session</th><th>Sec</th><th>Request Hex</th><th>Expected</th><th>Preconditions</th></tr></thead>
+          <tbody id="mxBody"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--muted-fg);">Click "Synthesize Matrix" to generate test cases</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: SIMULATION -->
+  <div class="pane" id="p-sim">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:9px;">
+      <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Live In-Memory Virtual ECU Simulation
+      </div>
+      <button class="btn btn-green" onclick="runSim()" id="simBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Execute All Tests Live
+      </button>
+    </div>
+
+    <div id="simProgress" style="display:none;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:3px;"><span id="simPLbl">Running...</span><span id="simPPct">0%</span></div>
+      <div class="prog-track"><div class="prog-fill green" id="simPBar" style="width:0%;"></div></div>
+    </div>
+
+    <div id="simStats" style="display:none;" class="stats"></div>
+
+    <div class="card" id="simResCard" style="display:none;">
+      <div class="card-hdr">
+        <div class="card-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Test Execution Results</div>
+        <span id="simResBadge"></span>
+      </div>
+      <div style="overflow-x:auto;max-height:240px;overflow-y:auto;">
+        <table class="tbl" aria-label="Test results"><thead><tr><th>ID</th><th>Type</th><th>Name</th><th>Request</th><th>Response</th><th>ms</th><th>Result</th></tr></thead>
+        <tbody id="simResBody"></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          Real-Time Virtual CAN Bus Sniffer
+          <span style="font-size:10px;font-family:var(--mono);color:var(--muted-fg);">0x7E0 ⟷ 0x7E8 (ISO-TP)</span>
+        </div>
+        <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;" onclick="clearCan()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Clear
+        </button>
+      </div>
+      <div class="can-log" id="canLog" role="log" aria-label="CAN bus frame log" aria-live="polite">
+        <table class="tbl" style="min-width:680px;">
+          <thead><tr><th>Time</th><th>CAN ID</th><th>Dir</th><th>DLC</th><th>Hex Data</th><th>Decoded UDS</th><th>Status</th></tr></thead>
+          <tbody id="canBody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted-fg);font-family:var(--mono);font-size:11px;">Awaiting test execution...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ TAB: 10-ECU BENCHMARK ═══════ -->
+  <div class="pane" id="p-benchmark">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:9px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          10-ECU Real-World Empirical Benchmark
+        </div>
+        <div style="font-size:11px;color:var(--muted-fg);">Tested across 10 distinct production vehicle domains (Powertrain, BMS, MCU, ESP, EPS, BCM, SRS, T-Box, ADAS)</div>
+      </div>
+      <button class="btn btn-blue" onclick="loadBenchmarkData()" id="refreshBenchBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.45-8"/></svg>
+        Refresh Metrics
+      </button>
+    </div>
+
+    <!-- Benchmark Stat KPIs -->
+    <div class="stats" id="benchKpis">
+      <div class="stat"><div class="stat-lbl">ECUs Evaluated</div><div class="stat-val" id="bkEcus">10 ECUs</div><div class="stat-sub">10 Vehicle Domains</div></div>
+      <div class="stat green"><div class="stat-lbl">Tests Synthesized</div><div class="stat-val" id="bkTests">149</div><div class="stat-sub">vs 51 udsoncan</div></div>
+      <div class="stat amber"><div class="stat-lbl">NRCs Covered</div><div class="stat-val" id="bkNrcs">59</div><div class="stat-sub">5.9 avg / ECU</div></div>
+      <div class="stat blue"><div class="stat-lbl">Simulation Speed</div><div class="stat-val" id="bkSpeed">194.4 ms</div><div class="stat-sub">Per ECU Average</div></div>
+      <div class="stat"><div class="stat-lbl">Lines Generated</div><div class="stat-val" id="bkLoc">2,674</div><div class="stat-sub">PyTest + CAPL</div></div>
+    </div>
+
+    <!-- Comparative Visualizations (2x2 Grid) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="graph-card">
+        <img class="graph-img" src="/docs-assets/benchmark_10_ecus_test_cases.png" alt="Test Cases Synthesized across 10 ECUs" onerror="this.src='/docs/benchmark_10_ecus_test_cases.png'" />
+        <div class="graph-caption">📊 Chart 1: Test Cases Synthesized &amp; Tested Across 10 Diverse Automotive ECUs</div>
+      </div>
+      <div class="graph-card">
+        <img class="graph-img" src="/docs-assets/benchmark_10_ecus_nrc_coverage.png" alt="Unique NRC Scenarios Covered across 10 ECUs" onerror="this.src='/docs/benchmark_10_ecus_nrc_coverage.png'" />
+        <div class="graph-caption">🛡️ Chart 2: Unique Negative Response Code (NRC) Scenarios Verified Across 10 ECUs</div>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <img class="graph-img" src="/docs-assets/benchmark_10_ecus_overall_matrix.png" alt="Overall Aggregate Performance Matrix across 10 ECUs" onerror="this.src='/docs/benchmark_10_ecus_overall_matrix.png'" />
+      <div class="graph-caption">📈 Chart 3: Overall Aggregate Benchmark Comparison Across All 10 Automotive ECU Domains (Log Scale)</div>
+    </div>
+
+    <!-- 10-ECU Detailed Table -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          10 Real-World ECU Diagnostic Evaluation Breakdown
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl" aria-label="10 ECU benchmark table">
+          <thead>
+            <tr>
+              <th>#</th><th>ECU Target Domain</th><th>CAN IDs</th><th>Services / DIDs</th>
+              <th>AutoDiag-AI Tests</th><th>NRC Coverage</th><th>Simulation</th>
+              <th>udsoncan Tests</th><th>OpenPilot Tests</th><th>LOC Exported</th>
+            </tr>
+          </thead>
+          <tbody id="benchTableBody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: EXPORT -->
+  <div class="pane" id="p-export">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>
+            Python PyTest Suite <span class="b bi" style="font-size:9px;">CI/CD</span></div>
+        </div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:9px;">
+          <p style="font-size:12px;color:var(--muted-fg);line-height:1.6;">Executable <code style="font-family:var(--mono);color:#60A5FA;">pytest</code> + <code style="font-family:var(--mono);color:#60A5FA;">python-can</code> + <code style="font-family:var(--mono);color:#60A5FA;">can-isotp</code> suite with full session/security setup and byte-level assertions.</p>
+          <div style="display:flex;gap:7px;">
+            <button class="btn btn-blue" onclick="previewScript('python')" id="prevPyBtn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </button>
+            <a id="dlPy" class="btn btn-outline" style="text-decoration:none;" download>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download .py
+            </a>
+          </div>
+          <div id="pyPreview" style="display:none;"><pre class="code" id="pyCode"></pre></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+            Vector CAPL Script <span class="b bs" style="font-size:9px;">HIL / CANoe</span></div>
+        </div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:9px;">
+          <p style="font-size:12px;color:var(--muted-fg);line-height:1.6;">Native Vector CANoe <code style="font-family:var(--mono);color:#FCD34D;">.can</code>/<code style="font-family:var(--mono);color:#FCD34D;">.capl</code> with <code style="font-family:var(--mono);font-size:11px;color:#FCD34D;">testcase</code>, <code style="font-family:var(--mono);font-size:11px;color:#FCD34D;">diagSendRequest</code> and pass/fail logging.</p>
+          <div style="display:flex;gap:7px;">
+            <button class="btn btn-amber" onclick="previewScript('capl')" id="prevCaplBtn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </button>
+            <a id="dlCapl" class="btn btn-outline" style="text-decoration:none;color:#FCD34D;border-color:rgba(245,158,11,.4);" download>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download .can
+            </a>
+          </div>
+          <div id="caplPreview" style="display:none;"><pre class="code" id="caplCode"></pre></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>JSON Test Suite <span class="b bp" style="font-size:9px;">CI/CD Integration</span></div>
+      </div>
+      <div class="card-body" style="display:flex;align-items:center;gap:9px;">
+        <span style="font-size:12px;color:var(--muted-fg);">Structured JSON export for pipeline integration, test management, and reporting tools.</span>
+        <a id="dlJson" class="btn btn-ghost" style="margin-left:auto;text-decoration:none;" download>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download JSON
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<div id="toasts" aria-live="assertive" role="status"></div>
+
+<script>
+// State
+let spec = null;
+let suite = [];
+const API = '';
+const TABS = ['upload','ai','matrix','sim','benchmark','export'];
+const TITLES = {
+  upload:'Specification Ingestion', ai:'AI Diagnostic Assistant',
+  matrix:'Automated Test Matrix', sim:'Virtual ECU Test Bench',
+  benchmark:'10-ECU Empirical Benchmark', export:'Script Exporter'
+};
+const BADGES = {
+  upload:'Awaiting Upload', ai:'ISO 14229 Knowledge Base',
+  matrix:'Test Case Synthesis', sim:'Virtual ISO-TP ECU',
+  benchmark:'10 Vehicles Tested', export:'Multi-Target Export'
+};
+
+// Navigation
+function go(id) {
+  TABS.forEach(t => {
+    document.getElementById('p-'+t).classList.toggle('active', t===id);
+    const n = document.getElementById('n-'+t);
+    const tb = document.getElementById('t-'+t);
+    if(n) n.classList.toggle('active', t===id);
+    if(tb) { tb.classList.toggle('active', t===id); tb.setAttribute('aria-selected', t===id); }
+  });
+  document.getElementById('ttitle').textContent = TITLES[id];
+  document.getElementById('tbadge').textContent = spec ? (id==='upload'?spec.ecu_name:BADGES[id]) : BADGES[id];
+  if (id === 'benchmark') {
+    loadBenchmarkData();
+  }
+}
+
+// Toast
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span style="font-weight:700;">${{success:'✓',error:'✕',info:'ℹ'}[type]||'ℹ'}</span><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// Upload
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); const f = e.dataTransfer.files[0]; if(f) upload(f); });
+document.getElementById('fileIn').addEventListener('change', e => { if(e.target.files[0]) upload(e.target.files[0]); });
+
+async function upload(file) {
+  const msg = document.getElementById('uploadMsg');
+  msg.style.display = 'block';
+  msg.innerHTML = `<div class="loaded-pill"><span class="spin"></span> Parsing <strong>${file.name}</strong>...</div>`;
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const r = await fetch(`${API}/api/v1/specs/upload`, {method:'POST', body:fd});
+    if(!r.ok) throw new Error(await r.text());
+    const s = await r.json();
+    onSpec(s, file.name);
+    msg.innerHTML = `<div class="loaded-pill">✓ Loaded: <strong>${file.name}</strong> — ${s.dids?.length||0} DIDs, ${s.services?.length||0} services</div>`;
+    toast(`Loaded: ${s.ecu_name}`, 'success');
+  } catch(e) {
+    msg.innerHTML = `<div style="color:var(--red);font-size:12px;">✕ ${e.message}</div>`;
+    toast('Upload failed', 'error');
+  }
+}
+
+async function loadSample() {
+  const msg = document.getElementById('uploadMsg');
+  msg.style.display = 'block';
+  msg.innerHTML = `<div class="loaded-pill"><span class="spin"></span> Loading sample Engine ECU spec...</div>`;
+  try {
+    const r = await fetch(`${API}/api/v1/specs/current`);
+    if(r.ok) {
+      const s = await r.json();
+      if(s?.ecu_name) { onSpec(s,'Engine_ECU (cached)'); msg.innerHTML=`<div class="loaded-pill">✓ Sample: <strong>${s.ecu_name}</strong></div>`; toast(`Loaded: ${s.ecu_name}`,'success'); return; }
+    }
+    const fr = await fetch('sample_specs/01_engine_ecu_pcm.json');
+    if(!fr.ok) throw new Error('Sample not found');
+    const blob = await fr.blob();
+    await upload(new File([blob],'01_engine_ecu_pcm.json',{type:'application/json'}));
+  } catch(e) {
+    msg.style.display = 'none';
+    toast('Load sample failed — upload manually', 'error');
+  }
+}
+
+function onSpec(s, fname) {
+  spec = s;
+  document.getElementById('loadedBadge').style.display = '';
+  document.getElementById('sEcu').textContent = s.ecu_name||'—';
+  document.getElementById('sSvc').textContent = s.services?.length||'—';
+  document.getElementById('sSvcList').textContent = (s.services||[]).slice(0,4).map(sv=>`$${sv.service_id.toString(16).toUpperCase().padStart(2,'0')}`).join(', ');
+  document.getElementById('sDid').textContent = s.dids?.length||'—';
+  document.getElementById('sRtn').textContent = s.routines?.length||'—';
+  document.getElementById('sCan').textContent = `${s.can_request_id}/${s.can_response_id}`;
+  document.getElementById('ecuName').textContent = s.ecu_name;
+  document.getElementById('ecuSub').textContent = `${s.dids?.length||0} DIDs · ${s.services?.length||0} services`;
+  document.getElementById('tbadge').textContent = s.ecu_name;
+
+  const db = document.getElementById('didBody');
+  db.innerHTML = '';
+  (s.dids||[]).forEach(d => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><code style="font-family:var(--mono);color:#60A5FA;font-size:11px;">${d.did_hex}</code></td><td style="font-weight:600;">${d.name}</td><td style="font-family:var(--mono);">${d.length_bytes}B</td><td><span class="b bi" style="font-size:9px;">${d.data_type}</span></td><td><span class="b ${d.access==='READ_ONLY'?'bp':'bs'}" style="font-size:9px;">${d.access}</span></td><td style="font-family:var(--mono);color:${d.security_level>0?'#FCD34D':'var(--muted-fg)'};">L${d.security_level}</td><td style="font-size:11px;color:var(--muted-fg);">${(d.allowed_sessions||[]).join(', ')}</td><td><code style="font-family:var(--mono);font-size:10px;color:#a8b9cc;">${d.default_value||'—'}</code></td>`;
+    db.appendChild(tr);
+  });
+  document.getElementById('didCard').style.display = '';
+
+  const sb = document.getElementById('svcBody');
+  sb.innerHTML = '';
+  (s.services||[]).forEach(sv => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><code style="font-family:var(--mono);color:#60A5FA;font-size:11px;">0x${sv.service_id.toString(16).toUpperCase().padStart(2,'0')}</code></td><td style="font-weight:600;">${sv.name}</td><td style="font-family:var(--mono);font-size:10px;color:var(--muted-fg);">${(sv.supported_subfunctions||[]).map(f=>`0x${f.toString(16).toUpperCase().padStart(2,'0')}`).join(', ')||'—'}</td><td style="font-size:11px;color:var(--muted-fg);">${(sv.allowed_sessions||[]).join(', ')}</td><td><span class="b ${sv.requires_security?'bs':'bp'}" style="font-size:9px;">${sv.requires_security?'Required':'None'}</span></td>`;
+    sb.appendChild(tr);
+  });
+  document.getElementById('svcCard').style.display = '';
+}
+
+// AI
+function setQ(q){ document.getElementById('qInput').value=q; document.getElementById('qInput').focus(); }
+async function askAI() {
+  const q = document.getElementById('qInput').value.trim();
+  if(!q) return;
+  const btn = document.getElementById('qBtn');
+  btn.disabled = true; btn.innerHTML='<span class="spin"></span>';
+  const out = document.getElementById('aiOut');
+  const cite = document.getElementById('aiCite');
+  out.style.display = 'block';
+  out.innerHTML = '<div style="color:var(--muted-fg);font-size:12px;display:flex;align-items:center;gap:7px;"><span class="spin"></span> Retrieving evidence...</div>';
+  cite.style.display = 'none';
+  try {
+    const r = await fetch(`${API}/api/v1/query`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,top_k:4})});
+    if(!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    const fmt = t => t.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code style="font-family:var(--mono);color:#60A5FA;background:rgba(59,130,246,.1);padding:1px 4px;border-radius:3px;">$1</code>');
+    out.innerHTML = `<div class="ai-card">${fmt(d.answer)}</div>`;
+    if(d.citations?.length){
+      cite.style.display='block';
+      cite.innerHTML=`<div style="margin-top:7px;"><span style="font-size:10px;font-weight:700;color:var(--muted-fg);text-transform:uppercase;letter-spacing:.8px;">Citations</span><div style="margin-top:4px;">${d.citations.map(c=>`<span class="cite" title="${c.content}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>${c.section}</span>`).join('')}</div></div>`;
+    }
+    const hist = document.getElementById('aiHist');
+    const card = document.createElement('div');
+    card.className='card';
+    card.innerHTML=`<div class="card-hdr"><div class="card-title" style="font-size:12px;color:var(--muted-fg);">${q}</div></div><div class="card-body"><div class="ai-card">${fmt(d.answer)}</div></div>`;
+    hist.insertBefore(card, hist.firstChild);
+    document.getElementById('qInput').value='';
+  } catch(e) {
+    out.innerHTML=`<div style="color:var(--red);font-size:12px;">✕ ${e.message}</div>`;
+    toast('Query failed','error');
+  }
+  btn.disabled=false; btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Ask';
+}
+document.getElementById('qInput').addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey){e.preventDefault();askAI();} });
+
+// Matrix
+async function genMatrix() {
+  const btn = document.getElementById('genBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Generating...';
+  try {
+    const r = await fetch(`${API}/api/v1/tests/generate`,{method:'POST'});
+    if(!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    suite = d.test_cases||[];
+    document.getElementById('nbadge').textContent = suite.length;
+    renderMx(suite);
+    setJsonDl();
+    toast(`Generated ${suite.length} test cases`,'success');
+  } catch(e) { toast('Matrix failed: '+e.message,'error'); }
+  btn.disabled=false; btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.45-8"/></svg> Synthesize Matrix';
+}
+function filterMx(){ const f=document.getElementById('mxFilter').value; renderMx(f?suite.filter(t=>t.test_type===f):suite); }
+function renderMx(arr) {
+  const tbody = document.getElementById('mxBody');
+  tbody.innerHTML = '';
+  if(!arr.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted-fg);">No test cases</td></tr>'; return; }
+  arr.forEach(tc => {
+    const tb = tc.test_type==='POSITIVE'?'bp':tc.test_type==='NEGATIVE_NRC'?'bn':'bs';
+    const tr = document.createElement('tr');
+    tr.innerHTML=`<td><code style="font-family:var(--mono);color:#60A5FA;font-size:11px;">${tc.test_id}</code></td><td><span class="b ${tb}" style="font-size:9px;">${tc.test_type}</span></td><td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${tc.name}">${tc.name}</td><td><span class="b bv" style="font-size:9px;">${tc.session}</span></td><td style="font-family:var(--mono);font-size:11px;color:${tc.security_level>0?'#FCD34D':'var(--muted-fg)'};">L${tc.security_level}</td><td><code style="font-family:var(--mono);color:#22C55E;font-size:11px;">${tc.request_hex}</code></td><td style="font-family:var(--mono);font-size:11px;">${tc.expected_response_hex?`<span style="color:#22C55E;">${tc.expected_response_hex}</span>`:`<span class="b bs" style="font-size:9px;">${tc.expected_nrc||'—'}</span>`}</td><td style="font-size:10px;color:var(--muted-fg);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(tc.preconditions||[]).join(', ')}">${(tc.preconditions||[]).join(', ')||'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  const sum = document.getElementById('mxSummary');
+  const pos=arr.filter(t=>t.test_type==='POSITIVE').length, neg=arr.filter(t=>t.test_type==='NEGATIVE_NRC').length, sec=arr.filter(t=>t.test_type==='SECURITY_ACCESS').length;
+  sum.style.display='flex';
+  sum.innerHTML=`<span class="b bi">${arr.length} total</span><span class="b bp">✓ ${pos} positive</span><span class="b bn">✕ ${neg} negative</span><span class="b bs">🔑 ${sec} security</span>`;
+}
+
+// Simulation
+async function runSim() {
+  const btn = document.getElementById('simBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Executing...';
+  const prog=document.getElementById('simProgress');
+  const pbar=document.getElementById('simPBar');
+  const plbl=document.getElementById('simPLbl');
+  const ppct=document.getElementById('simPPct');
+  prog.style.display='block'; pbar.style.width='0%';
+  plbl.textContent='Connecting to Virtual ECU...';
+  document.getElementById('canBody').innerHTML='<tr><td colspan="7" style="text-align:center;padding:10px;color:var(--muted-fg);font-size:11px;"><span class="spin"></span> Running...</td></tr>';
+  try {
+    plbl.textContent='Running test matrix...'; pbar.style.width='25%'; ppct.textContent='25%';
+    const r = await fetch(`${API}/api/v1/tests/execute`,{method:'POST'});
+    if(!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    pbar.style.width='100%'; ppct.textContent='100%'; plbl.textContent='Complete!';
+    const sm = d.summary||{};
+    const res = d.results||[];
+
+    const sg = document.getElementById('simStats');
+    sg.style.display = 'grid';
+    sg.className = 'stats';
+    sg.innerHTML=`<div class="stat"><div class="stat-lbl">Total</div><div class="stat-val">${sm.total||0}</div></div><div class="stat green"><div class="stat-lbl">Passed</div><div class="stat-val">${sm.passed||0}</div></div><div class="stat red"><div class="stat-lbl">Failed</div><div class="stat-val">${sm.failed||0}</div></div><div class="stat blue"><div class="stat-lbl">Pass Rate</div><div class="stat-val">${sm.pass_rate_percent||0}%</div></div><div class="stat amber"><div class="stat-lbl">Coverage</div><div class="stat-val" style="font-size:11px;padding-top:4px;">Pos+NRC</div></div>`;
+
+    const rb = document.getElementById('simResBody');
+    rb.innerHTML='';
+    res.forEach(r => {
+      const tb=r.test_type==='POSITIVE'?'bp':r.test_type==='NEGATIVE_NRC'?'bn':'bs';
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td><code style="font-family:var(--mono);color:#60A5FA;font-size:11px;">${r.test_id}</code></td><td><span class="b ${tb}" style="font-size:9px;">${r.test_type}</span></td><td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.name}">${r.name}</td><td><code style="font-family:var(--mono);color:#22C55E;font-size:11px;">${r.request_sent_hex}</code></td><td><code style="font-family:var(--mono);font-size:11px;color:${r.passed?'#22C55E':'#F87171'};">${r.actual_response_hex||r.actual_nrc||'—'}</code></td><td style="font-family:var(--mono);font-size:11px;color:var(--muted-fg);">${r.execution_time_ms}ms</td><td><span class="b ${r.passed?'bp':'bn'}" style="font-size:10px;">${r.passed?'PASS':'FAIL'}</span></td>`;
+      rb.appendChild(tr);
+    });
+    document.getElementById('simResCard').style.display='';
+    document.getElementById('simResBadge').innerHTML=`<span class="b ${sm.failed===0?'bp':'bn'}">${sm.failed===0?'✓ All Passed':sm.failed+' Failed'}</span>`;
+
+    const cb=document.getElementById('canBody');
+    cb.innerHTML='';
+    let frames=[];
+    res.forEach(r => frames.push(...(r.frames_sniffed||[])));
+    if(!frames.length){ cb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted-fg);font-size:11px;">No frames captured</td></tr>'; }
+    else { frames.forEach(f => { const tr=document.createElement('tr'); const sc=f.status==='OK'?'#22C55E':f.status==='NRC'?'#F87171':'var(--muted-fg)'; tr.innerHTML=`<td><code style="font-family:var(--mono);font-size:10px;color:var(--muted-fg);">${f.timestamp.toFixed(3)}</code></td><td><code style="font-family:var(--mono);font-size:11px;color:#FCD34D;">${f.can_id}</code></td><td><span class="b ${f.direction==='TX'?'bi':'bv'}" style="font-size:9px;">${f.direction}</span></td><td style="font-family:var(--mono);font-size:11px;color:var(--muted-fg);">${f.dlc}</td><td><code style="font-family:var(--mono);font-size:11px;color:#a8d1a8;letter-spacing:1px;">${f.data_hex}</code></td><td style="font-size:11px;">${f.decoded_uds||'—'}</td><td><span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${sc};">${f.status}</span></td>`; cb.appendChild(tr); }); }
+    const cl=document.getElementById('canLog'); cl.scrollTop=cl.scrollHeight;
+    toast(`${sm.passed}/${sm.total} passed (${sm.pass_rate_percent}%)`, sm.failed===0?'success':'error');
+  } catch(e) {
+    document.getElementById('canBody').innerHTML=`<tr><td colspan="7" style="text-align:center;padding:14px;color:var(--red);">Error: ${e.message}</td></tr>`;
+    toast('Simulation failed: '+e.message,'error');
+  }
+  btn.disabled=false; btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Execute All Tests Live';
+  setTimeout(()=>{ document.getElementById('simProgress').style.display='none'; },2000);
+}
+function clearCan(){ document.getElementById('canBody').innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted-fg);font-family:var(--mono);font-size:11px;">Cleared — run tests to capture frames</td></tr>'; }
+
+// ═══════════════════════════════════════════════════════
+// 10-ECU Empirical Benchmark Tab Handler
+// ═══════════════════════════════════════════════════════
+async function loadBenchmarkData() {
+  const btn = document.getElementById('refreshBenchBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Refreshing...'; }
+
+  try {
+    const r = await fetch(`${API}/api/v1/benchmark/data`);
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+
+    const sm = d.summary || {};
+    document.getElementById('bkEcus').textContent = `${sm.total_ecus} ECUs`;
+    document.getElementById('bkTests').textContent = `${sm.total_autodiag_tests}`;
+    document.getElementById('bkNrcs').textContent = `${sm.total_nrcs_covered}`;
+    document.getElementById('bkSpeed').textContent = `${sm.avg_execution_ms_per_ecu} ms`;
+    document.getElementById('bkLoc').textContent = `${sm.total_loc_generated.toLocaleString()}`;
+
+    const tbody = document.getElementById('benchTableBody');
+    tbody.innerHTML = '';
+    (d.ecus || []).forEach((e, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-family:var(--mono);color:var(--muted-fg);">${idx + 1}</td>
+        <td style="font-weight:600;color:var(--fg);">${e.display_name}</td>
+        <td><code style="font-family:var(--mono);font-size:11px;color:#FCD34D;">${e.can_ids}</code></td>
+        <td style="font-family:var(--mono);font-size:11px;">${e.services_count} svc / ${e.dids_count} dids</td>
+        <td><span class="b bp" style="font-size:11px;">${e.autodiag_tests} tests</span></td>
+        <td><span class="b bs" style="font-size:11px;">${e.autodiag_nrcs} NRCs</span></td>
+        <td><code style="font-family:var(--mono);font-size:11px;color:#22C55E;">${e.autodiag_time_ms} ms</code></td>
+        <td><span style="font-family:var(--mono);color:#60A5FA;">${e.udsoncan_tests} tests</span></td>
+        <td><span style="font-family:var(--mono);color:#C4B5FD;">${e.openpilot_tests} tests</span></td>
+        <td><code style="font-family:var(--mono);font-size:11px;color:var(--muted-fg);">${e.loc_generated} LOC</code></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    toast('10-ECU benchmark metrics refreshed', 'success');
+  } catch(err) {
+    toast('Could not fetch benchmark data: ' + err.message, 'error');
+  }
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.45-8"/></svg> Refresh Metrics'; }
+}
+
+// Script Export
+async function previewScript(type) {
+  const btn = document.getElementById(type==='python'?'prevPyBtn':'prevCaplBtn');
+  btn.disabled=true;
+  try {
+    const r = await fetch(`${API}/api/v1/export/${type}`);
+    if(!r.ok) throw new Error(await r.text());
+    const txt = await r.text();
+    const n = spec?.ecu_name||'ecu';
+    const blob = new Blob([txt],{type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    if(type==='python'){
+      document.getElementById('dlPy').href=url; document.getElementById('dlPy').download=`test_${n}_uds.py`;
+      document.getElementById('pyCode').textContent=txt.slice(0,3000)+(txt.length>3000?'\n... (truncated)':'');
+      document.getElementById('pyPreview').style.display='block';
+    } else {
+      document.getElementById('dlCapl').href=url; document.getElementById('dlCapl').download=`${n}_uds_tests.can`;
+      document.getElementById('caplCode').textContent=txt.slice(0,3000)+(txt.length>3000?'\n... (truncated)':'');
+      document.getElementById('caplPreview').style.display='block';
+    }
+    toast(`${type==='python'?'Python':'CAPL'} script ready`,'success');
+  } catch(e) { toast('Export failed: '+e.message,'error'); }
+  btn.disabled=false;
+}
+function setJsonDl(){
+  const blob=new Blob([JSON.stringify(suite,null,2)],{type:'application/json'});
+  document.getElementById('dlJson').href=URL.createObjectURL(blob);
+  document.getElementById('dlJson').download='test_suite.json';
+}
+
+// Init
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const r = await fetch(`${API}/api/v1/specs/current`);
+    if(r.ok){ const s=await r.json(); if(s?.ecu_name){ onSpec(s,s.ecu_name); document.getElementById('uploadMsg').style.display='block'; document.getElementById('uploadMsg').innerHTML=`<div class="loaded-pill">✓ Active: <strong>${s.ecu_name}</strong></div>`; } }
+  } catch(_){}
+  loadBenchmarkData();
+});
+</script>
+</body>
+</html>

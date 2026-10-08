@@ -1,0 +1,148 @@
+{
+  "ecu_name": "Inverter_Motor_Controller_MCU",
+  "can_request_id": "0x7E3",
+  "can_response_id": "0x7EB",
+  "can_functional_id": "0x7DF",
+  "p2_server_max_ms": 50,
+  "p2_star_server_max_ms": 5000,
+  "s3_server_timeout_ms": 5000,
+  "security_seed_key_mask": 221,
+  "services": [
+    {
+      "service_id": 16,
+      "name": "DiagnosticSessionControl",
+      "supported_subfunctions": [
+        1,
+        3
+      ],
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "service_id": 34,
+      "name": "ReadDataByIdentifier",
+      "supported_subfunctions": [],
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "service_id": 39,
+      "name": "SecurityAccess",
+      "supported_subfunctions": [
+        1,
+        2
+      ],
+      "allowed_sessions": [
+        "EXTENDED"
+      ]
+    },
+    {
+      "service_id": 46,
+      "name": "WriteDataByIdentifier",
+      "supported_subfunctions": [],
+      "allowed_sessions": [
+        "EXTENDED"
+      ],
+      "requires_security": true,
+      "security_level": 1
+    },
+    {
+      "service_id": 49,
+      "name": "RoutineControl",
+      "supported_subfunctions": [
+        1,
+        3
+      ],
+      "allowed_sessions": [
+        "EXTENDED"
+      ],
+      "requires_security": true,
+      "security_level": 1
+    },
+    {
+      "service_id": 62,
+      "name": "TesterPresent",
+      "supported_subfunctions": [
+        0,
+        128
+      ],
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    }
+  ],
+  "dids": [
+    {
+      "did_hex": "0xF190",
+      "name": "VIN",
+      "length_bytes": 17,
+      "data_type": "ASCII",
+      "access": "READ_ONLY",
+      "default_value": "5YJSA1E28MF012345",
+      "security_level": 0,
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "did_hex": "0x0500",
+      "name": "MotorSpeed_RPM",
+      "length_bytes": 2,
+      "data_type": "UINT16",
+      "access": "READ_ONLY",
+      "default_value": "1770",
+      "security_level": 0,
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "did_hex": "0x0501",
+      "name": "InverterIGBTTemp",
+      "length_bytes": 1,
+      "data_type": "UINT8",
+      "access": "READ_ONLY",
+      "default_value": "3C",
+      "security_level": 0,
+      "allowed_sessions": [
+        "DEFAULT",
+        "EXTENDED"
+      ]
+    },
+    {
+      "did_hex": "0x0510",
+      "name": "MaxTorqueLimit",
+      "length_bytes": 2,
+      "data_type": "UINT16",
+      "access": "READ_WRITE",
+      "default_value": "01C2",
+      "security_level": 1,
+      "allowed_sessions": [
+        "EXTENDED"
+      ]
+    }
+  ],
+  "routines": [
+    {
+      "routine_id": "0x0520",
+      "name": "RotorPositionResolverCalibration",
+      "supported_subfunctions": [
+        1,
+        3
+      ],
+      "start_payload_length": 2,
+      "allowed_sessions": [
+        "EXTENDED"
+      ],
+      "requires_security": true,
+      "security_level": 1
+    }
+  ]
+}

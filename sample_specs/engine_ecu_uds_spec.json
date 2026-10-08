@@ -1,0 +1,194 @@
+{
+  "ecu_name": "Engine_Control_Unit",
+  "can_request_id": "0x7E0",
+  "can_response_id": "0x7E8",
+  "can_functional_id": "0x7DF",
+  "p2_server_max_ms": 50,
+  "p2_star_server_max_ms": 5000,
+  "s3_server_timeout_ms": 5000,
+  "security_seed_key_mask": 170,
+  "services": [
+    {
+      "service_id": 16,
+      "name": "DiagnosticSessionControl",
+      "supported_subfunctions": [1, 2, 3],
+      "allowed_sessions": ["DEFAULT", "EXTENDED", "PROGRAMMING"],
+      "requires_security": false,
+      "security_level": 0,
+      "description": "Session transitions between Default (0x01), Programming (0x02), and Extended (0x03)"
+    },
+    {
+      "service_id": 17,
+      "name": "ECUReset",
+      "supported_subfunctions": [1, 2, 3],
+      "allowed_sessions": ["DEFAULT", "EXTENDED", "PROGRAMMING"],
+      "requires_security": false,
+      "security_level": 0,
+      "description": "Hard Reset (0x01), KeyOffOn (0x02), Soft Reset (0x03)"
+    },
+    {
+      "service_id": 34,
+      "name": "ReadDataByIdentifier",
+      "supported_subfunctions": [],
+      "allowed_sessions": ["DEFAULT", "EXTENDED"],
+      "requires_security": false,
+      "security_level": 0,
+      "description": "Read standard and OEM specific DIDs"
+    },
+    {
+      "service_id": 39,
+      "name": "SecurityAccess",
+      "supported_subfunctions": [1, 2, 3, 4],
+      "allowed_sessions": ["EXTENDED", "PROGRAMMING"],
+      "requires_security": false,
+      "security_level": 0,
+      "description": "Seed/Key exchange for Level 1 (Calibration) and Level 2 (Flashing)"
+    },
+    {
+      "service_id": 46,
+      "name": "WriteDataByIdentifier",
+      "supported_subfunctions": [],
+      "allowed_sessions": ["EXTENDED"],
+      "requires_security": true,
+      "security_level": 1,
+      "description": "Write protected parameter DIDs"
+    },
+    {
+      "service_id": 49,
+      "name": "RoutineControl",
+      "supported_subfunctions": [1, 2, 3],
+      "allowed_sessions": ["EXTENDED", "PROGRAMMING"],
+      "requires_security": true,
+      "security_level": 1,
+      "description": "Start, stop, and request results for diagnostic routines"
+    },
+    {
+      "service_id": 20,
+      "name": "ClearDiagnosticInformation",
+      "supported_subfunctions": [],
+      "allowed_sessions": ["EXTENDED"],
+      "requires_security": false,
+      "security_level": 0,
+      "description": "Clear all stored diagnostic trouble codes (DTCs)"
+    },
+    {
+      "service_id": 25,
+      "name": "ReadDTCInformation",
+      "supported_subfunctions": [1, 2, 10],
+      "allowed_sessions": ["DEFAULT", "EXTENDED"],
+      "requires_security": false,
+      "security_level": 0,
+      "description": "Read stored fault codes and status masks"
+    },
+    {
+      "service_id": 62,
+      "name": "TesterPresent",
+      "supported_subfunctions": [0, 128],
+      "allowed_sessions": ["DEFAULT", "EXTENDED", "PROGRAMMING"],
+      "requires_security": false,
+      "security_level": 0,
+      "description": "Keep-alive message to prevent S3 session timeout"
+    }
+  ],
+  "dids": [
+    {
+      "did_hex": "0xF190",
+      "name": "VIN",
+      "length_bytes": 17,
+      "data_type": "ASCII",
+      "access": "READ_ONLY",
+      "description": "Vehicle Identification Number",
+      "default_value": "WVWZZZ3CZWE123456",
+      "security_level": 0,
+      "allowed_sessions": ["DEFAULT", "EXTENDED"]
+    },
+    {
+      "did_hex": "0xF187",
+      "name": "ECUPartNumber",
+      "length_bytes": 11,
+      "data_type": "ASCII",
+      "access": "READ_ONLY",
+      "description": "OEM Spare Part Number",
+      "default_value": "06L907115AC",
+      "security_level": 0,
+      "allowed_sessions": ["DEFAULT", "EXTENDED"]
+    },
+    {
+      "did_hex": "0xF189",
+      "name": "ECUSoftwareVersion",
+      "length_bytes": 4,
+      "data_type": "ASCII",
+      "access": "READ_ONLY",
+      "description": "Application Software Calibration Version",
+      "default_value": "V102",
+      "security_level": 0,
+      "allowed_sessions": ["DEFAULT", "EXTENDED"]
+    },
+    {
+      "did_hex": "0xF199",
+      "name": "ProgrammingDate",
+      "length_bytes": 4,
+      "data_type": "BCD",
+      "access": "READ_WRITE",
+      "description": "Last flashing programming date (YYYYMMDD)",
+      "default_value": "20261004",
+      "security_level": 1,
+      "allowed_sessions": ["EXTENDED", "PROGRAMMING"]
+    },
+    {
+      "did_hex": "0x0100",
+      "name": "EngineRPM",
+      "length_bytes": 2,
+      "data_type": "UINT16",
+      "access": "READ_ONLY",
+      "description": "Current Engine Speed in RPM (0.25 rpm/bit)",
+      "default_value": "0DAC",
+      "security_level": 0,
+      "allowed_sessions": ["DEFAULT", "EXTENDED"]
+    },
+    {
+      "did_hex": "0x0101",
+      "name": "EngineCoolantTemp",
+      "length_bytes": 1,
+      "data_type": "UINT8",
+      "access": "READ_ONLY",
+      "description": "Engine Coolant Temperature in deg C (-40 offset)",
+      "default_value": "82",
+      "security_level": 0,
+      "allowed_sessions": ["DEFAULT", "EXTENDED"]
+    },
+    {
+      "did_hex": "0x0200",
+      "name": "IdleSpeedTarget",
+      "length_bytes": 2,
+      "data_type": "UINT16",
+      "access": "READ_WRITE",
+      "description": "Target Idle Speed calibration in RPM",
+      "default_value": "0320",
+      "security_level": 1,
+      "allowed_sessions": ["EXTENDED"]
+    }
+  ],
+  "routines": [
+    {
+      "routine_id": "0x0201",
+      "name": "EraseFlashMemory",
+      "supported_subfunctions": [1, 3],
+      "start_payload_length": 4,
+      "allowed_sessions": ["PROGRAMMING"],
+      "requires_security": true,
+      "security_level": 1,
+      "description": "Erases application flash sector before reprogramming"
+    },
+    {
+      "routine_id": "0x0202",
+      "name": "VerifyFlashChecksum",
+      "supported_subfunctions": [1, 3],
+      "start_payload_length": 4,
+      "allowed_sessions": ["PROGRAMMING"],
+      "requires_security": true,
+      "security_level": 1,
+      "description": "Verifies CRC32 of uploaded flash payload"
+    }
+  ]
+}
